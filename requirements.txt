@@ -1,0 +1,12 @@
+# Pinned as a set: mediapipe 0.10.14 is the last version confirmed to still
+# ship the legacy mp.solutions.hands API used here, which forces an older
+# protobuf, which in turn forces a tensorflow version below 2.19 (2.19+
+# wants a newer protobuf that conflicts with mediapipe). If you deviate
+# from these pins and hit a protobuf import error, this is why.
+tensorflow>=2.15,<2.19
+mediapipe==0.10.14
+protobuf>=4.25.3,<5
+numpy<2.0
+opencv-contrib-python
+matplotlib
+scikit-learn
