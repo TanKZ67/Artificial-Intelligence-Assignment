@@ -3,7 +3,7 @@ import mediapipe as mp
 import numpy as np
 import joblib
 
-model = joblib.load("asl_svm_model.pkl")
+model = joblib.load("Models/asl_svm_model.pkl")
 
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.7, min_tracking_confidence=0.7)

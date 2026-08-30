@@ -4,7 +4,7 @@ import numpy as np
 import joblib
 
 # 仅替换模型文件名称为你自己的
-model = joblib.load("RandomForest/asl_rf_model.pkl")
+model = joblib.load("Models/asl_rf_model.pkl")
 
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.7, min_tracking_confidence=0.7)

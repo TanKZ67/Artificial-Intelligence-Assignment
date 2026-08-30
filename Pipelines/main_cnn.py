@@ -1,3 +1,5 @@
+import os
+import sys
 from collections import deque
 
 import cv2
@@ -5,10 +7,14 @@ import mediapipe as mp
 import numpy as np
 import tensorflow as tf
 
-from hand_crop_utils import BOX_PADDING_RATIO, apply_hand_mask, hand_bounding_box, letterbox_square
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if BASE_DIR not in sys.path:
+    sys.path.append(BASE_DIR)
 
-MODEL_PATH = "asl_cnn_model.tflite" 
-LABELS_PATH = "asl_cnn_labels.txt"
+from Utils.hand_crop_utils import BOX_PADDING_RATIO, apply_hand_mask, hand_bounding_box, letterbox_square
+
+MODEL_PATH = os.path.join(BASE_DIR, "Models", "asl_cnn_model.tflite")
+LABELS_PATH = os.path.join(BASE_DIR, "Models", "asl_cnn_labels.txt")
 IMAGE_SIZE = 96 
 
 CAPTURE_WIDTH = 640
@@ -62,6 +68,11 @@ class HandSignInterpreter:
 
     def __init__(self, model_path=MODEL_PATH, labels_path=LABELS_PATH, image_size=IMAGE_SIZE):
         self.image_size = image_size
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"Model file not found at '{model_path}'. Check if Models/ folder has the tflite file.")
+        if not os.path.exists(labels_path):
+            raise FileNotFoundError(f"Labels file not found at '{labels_path}'. Check if Models/ folder has the txt file.")
+            
         print(f"Loading TFLite model from '{model_path}'...")
         self.interpreter = tf.lite.Interpreter(model_path=model_path)
         self.interpreter.allocate_tensors()
