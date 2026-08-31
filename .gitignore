@@ -2,3 +2,9 @@
 dataset/
 __pycache__/
 *.pyc
+Models/*.h5
+Models/*.tflite
+Models/*.pkl
+*.h5
+*.tflite
+*.pkl

@@ -1,20 +1,8 @@
-"""
-ASL 手语识别 - 主入口
-
-运行方式:
-    python main.py
-
-菜单里选择一个模型 (CNN / Random Forest / SVM) 后即可打开摄像头开始识别。
-在识别界面里:
-    - 按 [ESC]        返回本菜单，重新选择模型
-    - 按 [Q]          直接退出整个程序
-"""
-
 import sys
 
-from Pipelines.Pipelines import main_cnn
-from Pipelines.Pipelines import main_rf
-from Pipelines.Pipelines import main_svm
+from Pipelines import main_cnn
+from Pipelines import main_rf
+from Pipelines import main_svm
 
 MODELS = {
     "1": ("CNN (MediaPipe + TFLite)", main_cnn.run),
@@ -24,48 +12,48 @@ MODELS = {
 
 
 def print_menu():
-    print("\n===== ASL 手语识别 - 选择模型 =====")
+    print("\n===== ASL Recognition - Model Selection =====")
     for key, (name, _) in MODELS.items():
         print(f"  [{key}] {name}")
-    print("  [Q] exit programe")
-    print("====================================")
+    print("  [Q] Exit Program")
+    print("==============================================")
 
 
 def main():
     while True:
         print_menu()
-        choice = input("Please Choice: ").strip().lower()
+        choice = input("Please select an option: ").strip().lower()
 
         if choice in ("q", "quit", "exit"):
-            print("已退出。")
+            print("Exiting program.")
             break
 
         if choice not in MODELS:
-            print("Invalid option, please re-enter.")
+            print("Invalid option, please try again.")
             continue
 
         name, run_pipeline = MODELS[choice]
-        print(f"\n启动模型: {name}")
-        print("(识别界面中: ESC 返回菜单, Q 直接退出)\n")
+        print(f"\nLaunching model: {name}")
+        print("(In camera window: Press [ESC] to return to menu, [Q] to exit)\n")
 
         try:
             action = run_pipeline()
         except KeyboardInterrupt:
-            print("\n检测到中断，返回菜单。")
+            print("\nInterrupt detected. Returning to menu.")
             action = "menu"
         except Exception as exc:
-            print(f"[错误] 运行 {name} 时出现异常: {exc}")
+            print(f"[Error] An exception occurred while running {name}: {exc}")
             action = "menu"
 
         if action == "quit":
-            print("exited。")
+            print("Program exited.")
             break
-        # action == "menu" -> 回到 while 循环，重新显示菜单
+        # action == "menu" -> Returns to while loop and displays the menu again
 
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\nexited")
+        print("\nProgram exited.")
         sys.exit(0)
