@@ -27,21 +27,21 @@ def print_menu():
     print("\n===== ASL 手语识别 - 选择模型 =====")
     for key, (name, _) in MODELS.items():
         print(f"  [{key}] {name}")
-    print("  [Q] 退出程序")
+    print("  [Q] exit programe")
     print("====================================")
 
 
 def main():
     while True:
         print_menu()
-        choice = input("请输入选项: ").strip().lower()
+        choice = input("Please Choice: ").strip().lower()
 
         if choice in ("q", "quit", "exit"):
             print("已退出。")
             break
 
         if choice not in MODELS:
-            print("无效选项，请重新输入。")
+            print("Invalid option, please re-enter.")
             continue
 
         name, run_pipeline = MODELS[choice]
@@ -58,7 +58,7 @@ def main():
             action = "menu"
 
         if action == "quit":
-            print("已退出。")
+            print("exited。")
             break
         # action == "menu" -> 回到 while 循环，重新显示菜单
 
@@ -67,5 +67,5 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n已退出。")
+        print("\nexited")
         sys.exit(0)
