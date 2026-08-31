@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 from collections import deque
 
 import cv2
@@ -7,7 +8,7 @@ import mediapipe as mp
 import numpy as np
 import tensorflow as tf
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
     sys.path.append(BASE_DIR)
 
@@ -17,11 +18,14 @@ MODEL_PATH = os.path.join(BASE_DIR, "Models", "asl_cnn_model.tflite")
 LABELS_PATH = os.path.join(BASE_DIR, "Models", "asl_cnn_labels.txt")
 IMAGE_SIZE = 96 
 
-CAPTURE_WIDTH = 640
-CAPTURE_HEIGHT = 480
+CAPTURE_WIDTH = 1280
+CAPTURE_HEIGHT = 720
 PROCESS_EVERY_N_FRAMES = 2 
 
 CONFIDENCE_THRESHOLD = 0.75
+AUTO_ENTER_THRESHOLD = 0.90   
+COOLDOWN_SAME_CHAR = 2.0      
+
 SMOOTHING_WINDOW = 5 
 TTA_PADDING_OFFSETS = (-0.08, 0.0, 0.08) 
 SPECIAL_TOKENS = {"space", "del", "nothing"}
@@ -154,7 +158,7 @@ class WordBuilder:
             self.text += " "
         elif label == "del":
             self.text = self.text[:-1]
-        elif label not in SPECIAL_TOKENS:
+        elif label not in SPECIAL_TOKENS and label != "None":
             self.text += label
 
     def backspace(self):
@@ -188,19 +192,13 @@ def draw_overlay(frame, box, label, confidence, word):
         "[Space] append  [Backspace] delete  [C] clear  [ESC] menu  [Q] quit",
         (20, frame.shape[0] - 20),
         cv2.FONT_HERSHEY_SIMPLEX,
-        0.55,
-        (200, 200, 200),
-        1,
+        0.8,
+        (0, 0, 0),
+        2,
     )
 
 
 def run():
-    """Run the CNN ASL pipeline.
-
-    Returns:
-        "menu" if the user pressed ESC (go back to the model-selection menu)
-        "quit" if the user pressed Q (exit the whole program)
-    """
     try:
         interpreter = HandSignInterpreter()
     except FileNotFoundError as exc:
@@ -218,9 +216,17 @@ def run():
     capture.set(cv2.CAP_PROP_FRAME_HEIGHT, CAPTURE_HEIGHT)
     grabber = FrameGrabber(capture)
 
+    window_name = "CNN ASL Word Builder"
+    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+    cv2.resizeWindow(window_name, CAPTURE_WIDTH, CAPTURE_HEIGHT)
+
     frame_index = 0
     last_box, last_label, last_confidence, last_landmarks = None, "None", 0.0, None
     action = "menu"
+
+   
+    last_inserted_label = None
+    last_inserted_time = 0.0
 
     print("CNN + MediaPipe ASL word builder started (TFLite runtime).")
     print("[Space] append  [Backspace] delete  [C] clear  [ESC] back to menu  [Q] quit")
@@ -253,6 +259,20 @@ def run():
                             label = interpreter.label_for_index(best_index)
                             last_box, last_label, last_confidence = box, label, confidence
                             last_landmarks = hand_landmarks
+
+                            
+                            current_time = time.time()
+                            if confidence >= AUTO_ENTER_THRESHOLD and label not in ("None", "nothing"):
+                                if label != last_inserted_label:
+                                    
+                                    word_builder.append_letter(label)
+                                    last_inserted_label = label
+                                    last_inserted_time = current_time
+                                else:
+                                    
+                                    if current_time - last_inserted_time >= COOLDOWN_SAME_CHAR:
+                                        word_builder.append_letter(label)
+                                        last_inserted_time = current_time
                         else:
                             last_box, last_label, last_confidence, last_landmarks = None, "None", 0.0, None
                     else:
@@ -263,7 +283,7 @@ def run():
                     mp_draw.draw_landmarks(frame, last_landmarks, mp_hands.HAND_CONNECTIONS)
 
                 draw_overlay(frame, last_box, last_label, last_confidence, word_builder.text)
-                cv2.imshow("CNN ASL Word Builder", frame)
+                cv2.imshow(window_name, frame)
 
                 key = cv2.waitKey(1) & 0xFF
                 if key in (ord("q"), ord("Q")):
@@ -274,10 +294,13 @@ def run():
                     break
                 elif key == ord(" "):
                     word_builder.append_letter(last_label)
+                    last_inserted_label = last_label
+                    last_inserted_time = time.time()
                 elif key in (8, 127): 
                     word_builder.backspace()
                 elif key in (ord("c"), ord("C")):
                     word_builder.clear()
+                    last_inserted_label = None
     finally:
         grabber.stop()
         capture.release()
