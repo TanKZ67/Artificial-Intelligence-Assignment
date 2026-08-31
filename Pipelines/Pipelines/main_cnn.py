@@ -7,7 +7,7 @@ import mediapipe as mp
 import numpy as np
 import tensorflow as tf
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if BASE_DIR not in sys.path:
     sys.path.append(BASE_DIR)
 
@@ -185,7 +185,7 @@ def draw_overlay(frame, box, label, confidence, word):
 
     cv2.putText(
         frame,
-        "[Space] append  [Backspace] delete  [C] clear  [Q] quit",
+        "[Space] append  [Backspace] delete  [C] clear  [ESC] menu  [Q] quit",
         (20, frame.shape[0] - 20),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.55,
@@ -194,22 +194,36 @@ def draw_overlay(frame, box, label, confidence, word):
     )
 
 
-def main():
-    interpreter = HandSignInterpreter()
+def run():
+    """Run the CNN ASL pipeline.
+
+    Returns:
+        "menu" if the user pressed ESC (go back to the model-selection menu)
+        "quit" if the user pressed Q (exit the whole program)
+    """
+    try:
+        interpreter = HandSignInterpreter()
+    except FileNotFoundError as exc:
+        print(f"[CNN] {exc}")
+        return "menu"
+
     word_builder = WordBuilder()
     smoother = RollingPrediction()
 
     capture = cv2.VideoCapture(0)
     if not capture.isOpened():
-        raise RuntimeError("Could not open webcam (index 0).")
+        print("[CNN] Could not open webcam (index 0).")
+        return "menu"
     capture.set(cv2.CAP_PROP_FRAME_WIDTH, CAPTURE_WIDTH)
     capture.set(cv2.CAP_PROP_FRAME_HEIGHT, CAPTURE_HEIGHT)
     grabber = FrameGrabber(capture)
 
     frame_index = 0
     last_box, last_label, last_confidence, last_landmarks = None, "None", 0.0, None
+    action = "menu"
 
     print("CNN + MediaPipe ASL word builder started (TFLite runtime).")
+    print("[Space] append  [Backspace] delete  [C] clear  [ESC] back to menu  [Q] quit")
 
     try:
         with mp_hands.Hands(
@@ -252,7 +266,11 @@ def main():
                 cv2.imshow("CNN ASL Word Builder", frame)
 
                 key = cv2.waitKey(1) & 0xFF
-                if key in (ord("q"), ord("Q"), 27):
+                if key in (ord("q"), ord("Q")):
+                    action = "quit"
+                    break
+                elif key == 27:  # ESC -> back to menu
+                    action = "menu"
                     break
                 elif key == ord(" "):
                     word_builder.append_letter(last_label)
@@ -265,6 +283,12 @@ def main():
         capture.release()
         cv2.destroyAllWindows()
         print(f"Final word: {word_builder.text}")
+
+    return action
+
+
+def main():
+    run()
 
 
 if __name__ == "__main__":
